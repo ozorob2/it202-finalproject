@@ -20,6 +20,9 @@
 		.template {
 			display: none;
          }
+        .template1 {
+			display: none;
+         }
 	</style>
 </head>
 
@@ -41,7 +44,7 @@
             <a class="nav-link" href="#mapPage">Map</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#about">About</a>
+            <a class="nav-link" href="#weather">Weather</a>
           </li>
         </ul>
       </div>
@@ -49,11 +52,18 @@
     
        <div class="card template" style="width: 18rem;">
             <div class="card-body">
+                <h class="title">Card title</h>
                 <p class="street-address">Card title</p>
-                <p class="request-number">Card title</p>
-                <p class="grafitti-location">Card title</p>
-                <p class="surface-type">Card title</p>
-                <p class="status">Card title</p>
+                <p class="hours">Card title</p>
+                <p class="phone">Card title</p>
+                <p class="internet_wifi_training">Card title</p>
+            </div>
+       </div>
+    
+       <div class="card template1" style="width: 18rem;">
+            <div class="card-body">
+                <h class="status">Card title</h>
+                <p class="temperature">Card title</p>
             </div>
        </div>
     
@@ -75,41 +85,56 @@
       <div class="content" id="mapPage">
          <div id="map"></div>
       </div>
-      <div class="content" id="about">
-          Omar's Public Resources Lookup <br>
-          By: Omar Zorob <br>
-         <a href="https://github.com/ozorob2/it202-project2">Github Link</a>
+      <div class="content" id="weather">
+          Current Weather Forecast in your Area <br>
+          <div id="weatherCard"></div>
       </div>
     
     <script>
       function initMap() {
+          navigator.geolocation.getCurrentPosition(function (location) {
+              $("#weatherCard").empty();
+
+              var url = "https://api.apixu.com/v1/current.json?key=b580d123e84e4757ab155927192104&q=" + location.coords.latitude +","+location.coords.longitude;
+              $.get(url, function(response) {
+                  var data = response;
+                  console.log(data);
+                  var clone = $(".template1").clone();
+
+                  clone.find(".status").html(data.current.condition.text.bold() + "<br>" + "<br>");
+                  clone.find(".temperature").html("Current Temperature:" + "<br>" + data.current.temp_f+ " F <br>");
+                  clone.removeClass("template1");
+                    // insert into DOM
+                  $("#weatherCard").append(clone);
+              });
+          });
+          
           var chicago = {lat: 41.8781, lng: -87.6298};
-          var map = new google.maps.Map(document.getElementById('map'), {zoom: 10, center: chicago});
-          return map;
+          return new google.maps.Map(document.getElementById('map'), {zoom: 10, center: chicago});
       }
 
       function createMarkers (map, data) {
         //console.log(data);
         $.each(data, function(i,v) {
+          var internet = "F", wifi = "F", training = "F";
+          
+          if (v.internet)
+              internet = "T";
+          if (v.wifi)
+              wifi = "T";
+          if (v.training)
+              training = "T";
 
-          var location = {lat: parseFloat(v.latitude), lng: parseFloat(v.longitude) }
+          var location = {lat: parseFloat(v.location.coordinates[1]), lng: parseFloat(v.location.coordinates[0])}
           var marker = new google.maps.Marker({position: location, map: map});
 
-          if (v.status == "Completed")
-              marker.setIcon('https://maps.google.com/mapfiles/ms/icons/green-dot.png')
-          else
-              marker.setIcon('https://maps.google.com/mapfiles/ms/icons/blue-dot.png')
+          marker.setIcon('https://maps.google.com/mapfiles/ms/icons/blue-dot.png')
 
-          var content = "Address: " + v.street_address + "<br>";
-          content += "Grafitti-location: " + v.where_is_the_graffiti_located_ + "<br>";
-          content += "Request Number: " + v.service_request_number + "<br>";
-          content += "Surface Type: " + v.what_type_of_surface_is_the_graffiti_on_ + "<br>";
-          
-          if (v.status == "Completed")
-              content += "Status: " + v.status + " on " + v.completion_date.substr(0, v.completion_date.indexOf('T')) + "<br>";
-          else
-              content += "Status:\n " + v.status + "<br>";
-
+          var content = v.facility.bold() + "<br>" + "<br>";
+          content += "Address:" + v.street_address+ ", " + v.location_city + ", " + v.location_state + ", " + v.location_zip + "<br>";
+          content += "Hours:" + v.hours + "<br>";
+          content += "Phone Number:" + v.phone + "<br>";
+          content += "Internet/WiFi/Training:" + internet + "/" + wifi + "/" + training + "<br>";
          
           var infowindow = new google.maps.InfoWindow({
             content: content
@@ -200,49 +225,28 @@
                     //console.log(data);
                     var clone = $(".template").clone();
                       
-                    clone.find(".street-address").html("Address:" + "<br>" + v.street_address);
-                    clone.find(".request-number").html("Request Number:" + "<br>" + v.service_request_number);
-                    clone.find(".grafitti-location").html("Grafitti-location:" + "<br>" + v.where_is_the_graffiti_located_);
-                    clone.find(".surface-type").html("Surface Type:" + "<br>" + v.what_type_of_surface_is_the_graffiti_on_);
-                    clone.find(".status").html("Status:" + "<br>" + v.status);
+                    var internet = "F", wifi = "F", training = "F";
+                    if (v.internet)
+                        internet = "T";
+                    if (v.wifi)
+                        wifi = "T";
+                    if (v.training)
+                        training = "T";
                     
-                    if (v.status == "Completed"){
-                        clone.find(".status").html("Status:<br> " + v.status + " on " + v.completion_date.substr(0, v.completion_date.indexOf('T')));
-                    }
-   
+                    clone.find(".title").html(v.facility.bold() + "<br>" + "<br>");
+                    clone.find(".street-address").html("Address:" + "<br>" + v.street_address+ "<br>" 
+                                                       + v.location_city + ", " + v.location_state + ", " + v.location_zip);
+                    clone.find(".hours").html("Hours:" + "<br>" + v.hours);
+                    clone.find(".phone").html("Phone Number:" + "<br>" + v.phone);
+                    clone.find(".internet_wifi_training").html("Internet/WiFi/Training:" + "<br>" + internet + "/" + wifi + "/" + training);
                     clone.removeClass("template")
-
                     // insert into DOM
                     $("#cards").append(clone);
                   });
               })
           });
     });
-      
-    function distance(lat1, lon1, lat2, lon2, unit) {
-        if ((lat1 == lat2) && (lon1 == lon2)) {
-            return 0;
-        }
-        else {
-            var radlat1 = Math.PI * lat1/180;
-            var radlat2 = Math.PI * lat2/180;
-            var theta = lon1-lon2;
-            var radtheta = Math.PI * theta/180;
-            var dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
-            if (dist > 1) {
-                dist = 1;
-            }
-            dist = Math.acos(dist);
-            dist = dist * 180/Math.PI;
-            dist = dist * 60 * 1.1515;
-            if (unit=="K") { dist = dist * 1.609344 }
-            if (unit=="N") { dist = dist * 0.8684 }
-            return dist;
-        }
-    }
     </script>
-    
-    
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut"
 	 crossorigin="anonymous"></script>
